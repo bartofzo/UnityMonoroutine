@@ -4,7 +4,7 @@
  *
  * Usage:
  *
- * using UnityMonoroutine;
+ * Using UnityMonoroutine;
  *
     // Fades in CanvasGroup and then fades it out again
     canvasGroup.alpha = 0;
@@ -42,11 +42,24 @@ namespace UnityMonoroutine
 
             if (routines.TryGetValue(instanceId, out var runningRoutine))
             {
+                // Remove from routines to prevent infinite loop when the callback invokes a new monoroutine
+                // on this monobehaviour
+                routines.Remove(instanceId);
+
                 // Stop already running 'mono' routine
                 monoBehaviour.StopCoroutine(runningRoutine.Item1);
 
                 // When stopped inbetween, fire stored callback
                 runningRoutine.Item2?.Invoke();
+            }
+
+            if (!monoBehaviour.gameObject.activeInHierarchy ||
+                !monoBehaviour.gameObject.activeSelf)
+            {
+                // Catch Coroutine couldn't be started...
+                Debug.Log("Can't start monoroutine because monobehaviour is disabled");
+                callback?.Invoke();
+                return;
             }
 
             routines[instanceId] = new Tuple<Coroutine, Action>(monoBehaviour.StartCoroutine(WrapMonoroutine(coroutine, () =>
@@ -84,7 +97,7 @@ namespace UnityMonoroutine
             {
                 yield return coroutine.Current;
             }
-            callback();
+            callback?.Invoke();
         }
     }
 }

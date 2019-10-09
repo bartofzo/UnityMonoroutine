@@ -29,5 +29,15 @@ namespace UnityMonoroutine
             }
             canvasGroup.alpha = targetAlpha;
         }
+
+        public static IEnumerator Wait(float d)
+        {
+            yield return new WaitForSeconds(d);
+        }
+
+        public static IEnumerator WaitForEndOfFrame()
+        {
+            yield return new WaitForEndOfFrame();
+        }
     }
 }
