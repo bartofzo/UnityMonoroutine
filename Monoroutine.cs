@@ -83,13 +83,15 @@ namespace UnityMonoroutine
                 // Stop running 'mono' routine
                 monoBehaviour.StopCoroutine(runningRoutine.Item1);
 
-                // Stopped inbetween, fire stored callback
-                runningRoutine.Item2?.Invoke();
-
                 // Remove from collection
                 routines.Remove(instanceId);
+
+                // Stopped inbetween, fire stored callback
+                runningRoutine.Item2?.Invoke();
             }
         }
+
+
 
         private static IEnumerator WrapMonoroutine(IEnumerator coroutine, Action callback)
         {
