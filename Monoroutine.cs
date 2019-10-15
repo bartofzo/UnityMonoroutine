@@ -47,7 +47,9 @@ namespace UnityMonoroutine
                 routines.Remove(instanceId);
 
                 // Stop already running 'mono' routine
-                monoBehaviour.StopCoroutine(runningRoutine.Item1);
+                // Routine can be null (?)
+                if (runningRoutine.Item1 != null)
+                    monoBehaviour.StopCoroutine(runningRoutine.Item1);
 
                 // When stopped inbetween, fire stored callback
                 runningRoutine.Item2?.Invoke();
@@ -58,17 +60,24 @@ namespace UnityMonoroutine
             {
                 // Catch Coroutine couldn't be started...
                 Debug.Log("Can't start monoroutine because monobehaviour is disabled");
+
+                // Invoke callback yes or no ?
+                // yes for now
+
                 callback?.Invoke();
                 return;
             }
 
             routines[instanceId] = new Tuple<Coroutine, Action>(monoBehaviour.StartCoroutine(WrapMonoroutine(coroutine, () =>
             {
-                // Callback for when coroutine has fully completed
-                routines.Remove(instanceId);
-                callback?.Invoke();
 
-            })), callback);
+                // Callback for when coroutine has fully completed
+                // NOTE: let's be sure and invoke callback only if it wasn't already removed from the collection
+                if (routines.Remove(instanceId))
+                    callback?.Invoke();
+
+
+            })), callback); // insert the same callback also in the collection so we can invoke the callback when the routine gets interrupted
         }
 
         /// <summary>
