@@ -55,11 +55,12 @@ namespace UnityMonoroutine
                 runningRoutine.Item2?.Invoke();
             }
 
-            if (!monoBehaviour.gameObject.activeInHierarchy ||
+            if (monoBehaviour.gameObject == null ||
+                !monoBehaviour.gameObject.activeInHierarchy ||
                 !monoBehaviour.gameObject.activeSelf)
             {
                 // Catch Coroutine couldn't be started...
-                Debug.Log("Can't start monoroutine because monobehaviour is disabled");
+                //Debug.Log("Can't start monoroutine because monobehaviour is disabled");
 
                 // Invoke callback yes or no ?
                 // yes for now
@@ -99,8 +100,6 @@ namespace UnityMonoroutine
                 runningRoutine.Item2?.Invoke();
             }
         }
-
-
 
         private static IEnumerator WrapMonoroutine(IEnumerator coroutine, Action callback)
         {
