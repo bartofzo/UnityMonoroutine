@@ -60,8 +60,9 @@ namespace UnityMonoroutine
                 !monoBehaviour.gameObject.activeSelf)
             {
                 // Catch Coroutine couldn't be started...
+#if UNITY_EDITOR
                 //Debug.Log("Can't start monoroutine because monobehaviour is disabled");
-
+#endif
                 // Invoke callback yes or no ?
                 // yes for now
 
@@ -91,7 +92,9 @@ namespace UnityMonoroutine
             if (routines.TryGetValue(instanceId, out var runningRoutine))
             {
                 // Stop running 'mono' routine
-                monoBehaviour.StopCoroutine(runningRoutine.Item1);
+                // Routine can be null (?)
+                if (runningRoutine.Item1 != null)
+                    monoBehaviour.StopCoroutine(runningRoutine.Item1);
 
                 // Remove from collection
                 routines.Remove(instanceId);
