@@ -53,6 +53,7 @@ namespace UnityMonoroutine
 
                 // When stopped inbetween, fire stored callback
                 runningRoutine.Item2?.Invoke();
+
             }
 
             if (monoBehaviour.gameObject == null ||
@@ -70,16 +71,32 @@ namespace UnityMonoroutine
                 return;
             }
 
-            routines[instanceId] = new Tuple<Coroutine, Action>(monoBehaviour.StartCoroutine(WrapMonoroutine(coroutine, () =>
+          
+            
+            var routine = new Tuple<Coroutine, Action>(monoBehaviour.StartCoroutine(WrapMonoroutine(coroutine, () =>
             {
 
-                // Callback for when coroutine has fully completed
-                // NOTE: let's be sure and invoke callback only if it wasn't already removed from the collection
+                // When Coroutine fully finishes we end up here
+                // Only fire callback when it is still present in the collection, which means it hasn't been fired yet
+
                 if (routines.Remove(instanceId))
                     callback?.Invoke();
 
 
             })), callback); // insert the same callback also in the collection so we can invoke the callback when the routine gets interrupted
+
+            if (routine.Item1 != null)
+            {
+                // We add the coroutine to the collection only if it is actually running (did not yield break imm)
+                routines[instanceId] = routine;
+            }
+            else
+            {
+                // Coroutine yielded break immediately
+                // we don't even add it to the collection and fire possible callback
+                routine.Item2?.Invoke();
+
+            }
         }
 
         /// <summary>
@@ -91,13 +108,13 @@ namespace UnityMonoroutine
 
             if (routines.TryGetValue(instanceId, out var runningRoutine))
             {
+                // Remove from collection
+                routines.Remove(instanceId);
+
                 // Stop running 'mono' routine
                 // Routine can be null (?)
                 if (runningRoutine.Item1 != null)
                     monoBehaviour.StopCoroutine(runningRoutine.Item1);
-
-                // Remove from collection
-                routines.Remove(instanceId);
 
                 // Stopped inbetween, fire stored callback
                 runningRoutine.Item2?.Invoke();
@@ -110,6 +127,8 @@ namespace UnityMonoroutine
             {
                 yield return coroutine.Current;
             }
+
+            // this will wrap back to the creation of the tuple with coroutine and callback
             callback?.Invoke();
         }
     }
