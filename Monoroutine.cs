@@ -39,22 +39,8 @@ namespace UnityMonoroutine
         public static void StartMonoroutine(this MonoBehaviour monoBehaviour, IEnumerator coroutine, Action callback = null)
         {
             int instanceId = monoBehaviour.GetInstanceID();
+            RemoveRunningAndFire(monoBehaviour);
 
-            if (routines.TryGetValue(instanceId, out var runningRoutine))
-            {
-                // Remove from routines to prevent infinite loop when the callback invokes a new monoroutine
-                // on this monobehaviour
-                routines.Remove(instanceId);
-
-                // Stop already running 'mono' routine
-                // Routine can be null (?)
-                if (runningRoutine.Item1 != null)
-                    monoBehaviour.StopCoroutine(runningRoutine.Item1);
-
-                // When stopped inbetween, fire stored callback
-                runningRoutine.Item2?.Invoke();
-
-            }
 
             if (monoBehaviour.gameObject == null ||
                 !monoBehaviour.gameObject.activeInHierarchy ||
@@ -66,13 +52,12 @@ namespace UnityMonoroutine
 #endif
                 // Invoke callback yes or no ?
                 // yes for now
-
                 callback?.Invoke();
                 return;
             }
 
-          
-            
+
+
             var routine = new Tuple<Coroutine, Action>(monoBehaviour.StartCoroutine(WrapMonoroutine(coroutine, () =>
             {
 
@@ -85,16 +70,44 @@ namespace UnityMonoroutine
 
             })), callback); // insert the same callback also in the collection so we can invoke the callback when the routine gets interrupted
 
+
             if (routine.Item1 != null)
             {
+
+                // apparently while I dont fully understand yet there's a chance a previous callback hasn't been removed/fired
+                RemoveRunningAndFire(monoBehaviour);
+  
+
                 // We add the coroutine to the collection only if it is actually running (did not yield break imm)
                 routines[instanceId] = routine;
+
             }
             else
             {
                 // Coroutine yielded break immediately
                 // we don't even add it to the collection and fire possible callback
                 routine.Item2?.Invoke();
+            }
+        }
+
+        private static void RemoveRunningAndFire(MonoBehaviour monoBehaviour)
+        {
+            int instanceId = monoBehaviour.GetInstanceID();
+            if (routines.TryGetValue(instanceId, out var runningRoutine))
+            {
+                // Remove from routines to prevent infinite loop when the callback invokes a new monoroutine
+                // on this monobehaviour
+                routines.Remove(instanceId);
+
+                // Stop already running 'mono' routine
+                // Routine can be null (?)
+                if (runningRoutine.Item1 != null)
+                {
+                    monoBehaviour.StopCoroutine(runningRoutine.Item1);
+                }
+
+                // When stopped inbetween, fire stored callback
+                runningRoutine.Item2?.Invoke();
 
             }
         }
@@ -119,6 +132,11 @@ namespace UnityMonoroutine
                 // Stopped inbetween, fire stored callback
                 runningRoutine.Item2?.Invoke();
             }
+        }
+
+        public static bool IsRunningMonoroutine(this MonoBehaviour monoBehaviour)
+        {
+            return routines.ContainsKey(monoBehaviour.GetInstanceID());
         }
 
         private static IEnumerator WrapMonoroutine(IEnumerator coroutine, Action callback)
